@@ -374,3 +374,5 @@ test*_no_sub*.mp4
 /test/debug/
 /backend/tools/train/release_model/
 model.onnx
+
+/test/
