@@ -14,6 +14,7 @@ from tqdm import tqdm
 os.environ['FLAGS_use_mkldnn'] = '0'
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
+from . import config
 from .utils import expand_coordinates
 
 
@@ -65,19 +66,24 @@ class SubtitleDetector:
         return []
     
     @staticmethod
-    def are_similar(region1, region2, tolerance_x=20, tolerance_y=20):
+    def are_similar(region1, region2, tolerance_x=None, tolerance_y=None):
         """
         Determine if two regions are similar.
         
         Args:
             region1: Tuple of (xmin, xmax, ymin, ymax)
             region2: Tuple of (xmin, xmax, ymin, ymax)
-            tolerance_x: Horizontal pixel tolerance
-            tolerance_y: Vertical pixel tolerance
+            tolerance_x: Horizontal pixel tolerance (defaults to config)
+            tolerance_y: Vertical pixel tolerance (defaults to config)
             
         Returns:
             bool: True if regions are similar
         """
+        if tolerance_x is None:
+            tolerance_x = config.PIXEL_TOLERANCE_X
+        if tolerance_y is None:
+            tolerance_y = config.PIXEL_TOLERANCE_Y
+            
         xmin1, xmax1, ymin1, ymax1 = region1
         xmin2, xmax2, ymin2, ymax2 = region2
         
@@ -86,18 +92,22 @@ class SubtitleDetector:
                 abs(ymin1 - ymin2) <= tolerance_y and 
                 abs(ymax1 - ymax2) <= tolerance_y)
     
-    def unify_regions(self, raw_regions, tolerance_x=20, tolerance_y=20):
+    def unify_regions(self, raw_regions, tolerance_x=None, tolerance_y=None):
         """
         Unify continuous similar regions to prevent flickering.
         
         Args:
             raw_regions: Dict mapping frame_number -> list of coordinates
-            tolerance_x: Horizontal pixel tolerance
-            tolerance_y: Vertical pixel tolerance
+            tolerance_x: Horizontal pixel tolerance (defaults to config)
+            tolerance_y: Vertical pixel tolerance (defaults to config)
             
         Returns:
             Dict with unified regions
         """
+        if tolerance_x is None:
+            tolerance_x = config.PIXEL_TOLERANCE_X
+        if tolerance_y is None:
+            tolerance_y = config.PIXEL_TOLERANCE_Y
         if len(raw_regions) == 0:
             return raw_regions
             
@@ -163,13 +173,11 @@ class SubtitleDetector:
         
         return coordinate_list
     
-    def find_subtitle_frames(self, expansion_pixels=20):
+    def find_subtitle_frames(self):
         """
         Find all frames containing subtitles and their coordinates.
+        NOTE: Expansion is done in create_mask, not here (matches backend behavior)
         
-        Args:
-            expansion_pixels: Number of pixels to expand detected boxes
-            
         Returns:
             Dict mapping frame_number -> list of (xmin, xmax, ymin, ymax) tuples
         """
@@ -202,9 +210,8 @@ class SubtitleDetector:
                                    s_ymin <= ymin and ymax <= s_ymax):
                                 continue
                         
-                        # Expand coordinates
-                        expanded = expand_coordinates(coord, expansion_pixels)
-                        filtered_coords.append(expanded)
+                        # Do NOT expand here - expansion happens in create_mask
+                        filtered_coords.append(coord)
                     
                     if filtered_coords:
                         subtitle_frames[current_frame] = filtered_coords

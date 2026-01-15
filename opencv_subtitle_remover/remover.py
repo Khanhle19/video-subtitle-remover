@@ -11,6 +11,7 @@ import subprocess
 from tqdm import tqdm
 from pathlib import Path
 
+from . import config
 from .detector import SubtitleDetector
 from .utils import create_mask, is_video_or_image
 
@@ -35,15 +36,17 @@ class SubtitleRemover:
     Remove subtitles from videos using OpenCV's Telea inpainting algorithm.
     """
     
-    def __init__(self, video_path, sub_area=None, inpaint_radius=3):
+    def __init__(self, video_path, sub_area=None, inpaint_radius=None):
         """
         Initialize subtitle remover.
         
         Args:
             video_path: Path to input video file
             sub_area: Optional tuple (ymin, ymax, xmin, xmax) to restrict detection area
-            inpaint_radius: Radius for Telea inpainting algorithm (default: 3)
+            inpaint_radius: Radius for Telea inpainting algorithm (default: from config)
         """
+        if inpaint_radius is None:
+            inpaint_radius = config.INPAINT_RADIUS
         if not is_video_or_image(video_path):
             raise ValueError(f"Invalid video path: {video_path}")
         

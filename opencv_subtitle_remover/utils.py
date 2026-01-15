@@ -4,6 +4,8 @@ Utility functions for the OpenCV subtitle remover module.
 
 import os
 import numpy as np
+import cv2
+from . import config
 
 
 def is_video_or_image(file_path):
@@ -29,6 +31,7 @@ def is_video_or_image(file_path):
 def create_mask(mask_size, coordinates_list):
     """
     Create a binary mask from a list of coordinates.
+    Expands coordinates by SUBTITLE_AREA_DEVIATION_PIXEL to match backend behavior.
     
     Args:
         mask_size: Tuple of (height, width) for the mask
@@ -37,13 +40,21 @@ def create_mask(mask_size, coordinates_list):
     Returns:
         numpy.ndarray: Binary mask (uint8)
     """
-    import cv2
-    mask = np.zeros(mask_size, dtype=np.uint8)
+    mask = np.zeros(mask_size, dtype="uint8")
     
-    for coords in coordinates_list:
-        xmin, xmax, ymin, ymax = coords
-        # Use cv2.rectangle for proper mask creation (matches backend behavior)
-        cv2.rectangle(mask, (xmin, ymin), (xmax, ymax), (255, 255, 255), thickness=-1)
+    if coordinates_list:
+        for coords in coordinates_list:
+            xmin, xmax, ymin, ymax = coords
+            # Expand by SUBTITLE_AREA_DEVIATION_PIXEL with boundary checks (matches backend)
+            x1 = xmin - config.SUBTITLE_AREA_DEVIATION_PIXEL
+            if x1 < 0:
+                x1 = 0
+            y1 = ymin - config.SUBTITLE_AREA_DEVIATION_PIXEL
+            if y1 < 0:
+                y1 = 0
+            x2 = xmax + config.SUBTITLE_AREA_DEVIATION_PIXEL
+            y2 = ymax + config.SUBTITLE_AREA_DEVIATION_PIXEL
+            cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), thickness=-1)
     
     return mask
 
