@@ -54,14 +54,14 @@ def get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=None
 
 
 def get_version_numbers(version_str):
-    # 匹配主要版本号（支持 2.8.0 或 2.8.0.dev20250422+cu128 等格式）
+    # Match major version number (supports formats like 2.8.0 or 2.8.0.dev20250422+cu128)
     pattern = r"^(\d+)\.(\d+)\.(\d+)"
     match = re.match(pattern, version_str)
     if match:
         return [int(x) for x in match.groups()]
-    return [0, 0, 0]  # 如果无法匹配，返回默认值
+    return [0, 0, 0]  # Return default value if match fails
 
-# 使用示例
+# Usage example
 IS_HIGH_VERSION = get_version_numbers(torch.__version__) >= [1, 12, 0]
 
 

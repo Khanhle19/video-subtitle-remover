@@ -14,21 +14,21 @@ def main():
     SAVE_PATH = os.path.join(os.path.dirname(WORK_DIR), 'vsr_out')
     ICON_PATH = os.path.join(WORK_DIR, "design", "vsr.ico")
 
-    # 解析命令行参数
-    parser = argparse.ArgumentParser(description="打包程序")
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Package Program")
     parser.add_argument(
         "--cuda",
-        nargs="?",                # 可选参数值
-        const="11.8",             # 如果只写 --cuda，默认值是 10.2
-        default=None,             # 不写 --cuda，则为 None
-        help="是否包含CUDA模块，可指定版本，如 --cuda 或 --cuda=11.8"
+        nargs="?",                # Optional argument value
+        const="11.8",             # If only --cuda is written, default is 10.2
+        default=None,             # If --cuda is not written, it is None
+        help="Whether to include CUDA module, can specify version, like --cuda or --cuda=11.8"
     )
     parser.add_argument(
         "--directml",
-        nargs="?",                # 可选参数值
-        const=True,               # 如果只写 --directml，默认为True
-        default=None,             # 不写 --directml，则为 None
-        help="是否使用DirectML加速，仅指定 --directml 即可启用"
+        nargs="?",                # Optional argument value
+        const=True,               # If only --directml is written, default is True
+        default=None,             # If --directml is not written, it is None
+        help="Whether to use DirectML acceleration, just specify --directml to enable"
     )
 
     args = parser.parse_args()

@@ -28,5 +28,5 @@ def is_image_file(filename):
 
 def is_video_or_image(filename):
     file_extension = os.path.splitext(filename)[-1].lower()
-    # 检查扩展名是否在定义的视频或图片文件后缀集合中
+    # Check if the extension is in the defined video or image file suffix set
     return file_extension in video_extensions or file_extension in image_extensions

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 @Author  : Fang Yao
-@Time    : 2023/4/1 6:07 下午
+@Time    : 2023/4/1 6:07 PM
 @FileName: gui.py
-@desc: 字幕去除器图形化界面
+@desc: Subtitle Remover GUI
 """
 import os
 import configparser
@@ -28,102 +28,102 @@ class SubtitleRemoverGUI:
         self.screen_width, self.screen_height = sg.Window.get_screen_size()
         self.subtitle_config_file = os.path.join(os.path.dirname(__file__), 'subtitle.ini')
         print(self.screen_width, self.screen_height)
-        # 设置视频预览区域大小
+        # Set video preview area size
         self.video_preview_width = 960
         self.video_preview_height = self.video_preview_width * 9 // 16
-        # 默认组件大小
+        # Default component size
         self.horizontal_slider_size = (120, 20)
         self.output_size = (100, 10)
         self.progressbar_size = (60, 20)
-        # 分辨率低于1080
+        # Resolution lower than 1080
         if self.screen_width // 2 < 960:
             self.video_preview_width = 640
             self.video_preview_height = self.video_preview_width * 9 // 16
             self.horizontal_slider_size = (60, 20)
             self.output_size = (58, 10)
             self.progressbar_size = (28, 20)
-        # 字幕提取器布局
+        # Subtitle extractor layout
         self.layout = None
-        # 字幕提取其窗口
+        # Subtitle extractor window
         self.window = None
-        # 视频路径
+        # Video path
         self.video_path = None
-        # 视频cap
+        # Video capture
         self.video_cap = None
-        # 视频的帧率
+        # Video FPS
         self.fps = None
-        # 视频的帧数
+        # Video frame count
         self.frame_count = None
-        # 视频的宽
+        # Video width
         self.frame_width = None
-        # 视频的高
+        # Video height
         self.frame_height = None
-        # 设置字幕区域高宽
+        # Set subtitle area height and width
         self.xmin = None
         self.xmax = None
         self.ymin = None
         self.ymax = None
-        # 字幕提取器
+        # Subtitle remover
         self.sr = None
 
     def run(self):
-        # 创建布局
+        # Create layout
         self._create_layout()
-        # 创建窗口
+        # Create window
         self.window = sg.Window(title=f'Video Subtitle Remover v{backend.main.config.VERSION}' , layout=self.layout,
                                 icon=self.icon)
         while True:
-            # 循环读取事件
+            # Loop to read events
             event, values = self.window.read(timeout=10)
-            # 处理【打开】事件
+            # Handle [Open] event
             self._file_event_handler(event, values)
-            # 处理【滑动】事件
+            # Handle [Slide] event
             self._slide_event_handler(event, values)
-            # 处理【运行】事件
+            # Handle [Run] event
             self._run_event_handler(event, values)
-            # 如果关闭软件，退出
+            # If closing software, exit
             if event == sg.WIN_CLOSED:
                 break
-            # 更新进度条
+            # Update progress bar
             if self.sr is not None:
                 self.window['-PROG-'].update(self.sr.progress_total)
                 if self.sr.preview_frame is not None:
                     self.window['-DISPLAY-'].update(data=cv2.imencode('.png', self._img_resize(self.sr.preview_frame))[1].tobytes())
                 if self.sr.isFinished:
-                    # 1) 打开修改字幕滑块区域按钮
+                    # 1) Enable subtitle slider area modification
                     self.window['-Y-SLIDER-'].update(disabled=False)
                     self.window['-X-SLIDER-'].update(disabled=False)
                     self.window['-Y-SLIDER-H-'].update(disabled=False)
                     self.window['-X-SLIDER-W-'].update(disabled=False)
-                    # 2) 打开【运行】、【打开】和【识别语言】按钮
+                    # 2) Enable [Run], [Open], and [Identify Language] buttons
                     self.window['-RUN-'].update(disabled=False)
                     self.window['-FILE-'].update(disabled=False)
                     self.window['-FILE_BTN-'].update(disabled=False)
                     self.sr = None
                 if len(self.video_paths) >= 1:
-                    # 1) 关闭修改字幕滑块区域按钮
+                    # 1) Disable subtitle slider area modification
                     self.window['-Y-SLIDER-'].update(disabled=True)
                     self.window['-X-SLIDER-'].update(disabled=True)
                     self.window['-Y-SLIDER-H-'].update(disabled=True)
                     self.window['-X-SLIDER-W-'].update(disabled=True)
-                    # 2) 关闭【运行】、【打开】和【识别语言】按钮
+                    # 2) Disable [Run], [Open], and [Identify Language] buttons
                     self.window['-RUN-'].update(disabled=True)
                     self.window['-FILE-'].update(disabled=True)
                     self.window['-FILE_BTN-'].update(disabled=True)
 
     def _create_layout(self):
         """
-        创建字幕提取器布局
+        Create Subtitle Remover Layout
         """
         garbage = os.path.join(os.path.dirname(__file__), 'output')
         if os.path.exists(garbage):
             import shutil
             shutil.rmtree(garbage, True)
         self.layout = [
-            # 显示视频预览
+            # Display video preview
             [sg.Image(size=(self.video_preview_width, self.video_preview_height), background_color='black',
                       key='-DISPLAY-')],
-            # 打开按钮 + 快进快退条
+            # Open button + fast forward/rewind slider
             [sg.Input(key='-FILE-', visible=False, enable_events=True),
              sg.FilesBrowse(button_text='Open', file_types=((
                             'All Files', '*.*'), ('mp4', '*.mp4'),
@@ -135,7 +135,7 @@ class SubtitleRemoverGUI:
                        enable_events=True, font=self.font,
                        disable_number_display=True),
              ],
-            # 输出区域
+            # Output area
             [sg.Output(size=self.output_size, font=self.font),
              sg.Frame(title='Vertical', font=self.font, key='-FRAME1-',
              layout=[[
@@ -165,7 +165,7 @@ class SubtitleRemoverGUI:
              ]], pad=((15, 5), (0, 0)))
              ],
 
-            # 运行按钮 + 进度条
+            # Run button + progress bar
             [sg.Button(button_text='Run', key='-RUN-',
                        font=self.font, size=(20, 1)),
              sg.ProgressBar(100, orientation='h', size=self.progressbar_size, key='-PROG-', auto_size_text=True)
@@ -174,9 +174,9 @@ class SubtitleRemoverGUI:
 
     def _file_event_handler(self, event, values):
         """
-        当点击打开按钮时：
-        1）打开视频文件，将画布显示视频帧
-        2）获取视频信息，初始化进度条滑块范围
+        When the Open button is clicked:
+        1) Open the video file and display the video frame on the canvas
+        2) Get video information and initialize the progress bar slider range
         """
         if event == '-FILE-':
             self.video_paths = values['-FILE-'].split(';')
@@ -190,72 +190,72 @@ class SubtitleRemoverGUI:
                 if ret:
                     for video in self.video_paths:
                         print(f"Open Video Success：{video}")
-                    # 获取视频的帧数
+                    # Get video frame count
                     self.frame_count = self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT)
-                    # 获取视频的高度
+                    # Get video height
                     self.frame_height = self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                    # 获取视频的宽度
+                    # Get video width
                     self.frame_width = self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-                    # 获取视频的帧率
+                    # Get video FPS
                     self.fps = self.video_cap.get(cv2.CAP_PROP_FPS)
-                    # 调整视频帧大小，使播放器能够显示
+                    # Resize video frame for player display
                     resized_frame = self._img_resize(frame)
                     # resized_frame = cv2.resize(src=frame, dsize=(self.video_preview_width, self.video_preview_height))
-                    # 显示视频帧
+                    # Display video frame
                     self.window['-DISPLAY-'].update(data=cv2.imencode('.png', resized_frame)[1].tobytes())
-                    # 更新视频进度条滑块range
+                    # Update video progress slider range
                     self.window['-SLIDER-'].update(range=(1, self.frame_count))
                     self.window['-SLIDER-'].update(1)
-                    # 预设字幕区域位置
+                    # Preset subtitle area position
                     y_p, h_p, x_p, w_p = self.parse_subtitle_config()
                     y = self.frame_height * y_p
                     h = self.frame_height * h_p
                     x = self.frame_width * x_p
                     w = self.frame_width * w_p
-                    # 更新视频字幕位置滑块range
-                    # 更新Y-SLIDER范围
+                    # Update video subtitle position slider range
+                    # Update Y-SLIDER range
                     self.window['-Y-SLIDER-'].update(range=(0, self.frame_height), disabled=False)
-                    # 更新Y-SLIDER默认值
+                    # Update Y-SLIDER default value
                     self.window['-Y-SLIDER-'].update(y)
-                    # 更新X-SLIDER范围
+                    # Update X-SLIDER range
                     self.window['-X-SLIDER-'].update(range=(0, self.frame_width), disabled=False)
-                    # 更新X-SLIDER默认值
+                    # Update X-SLIDER default value
                     self.window['-X-SLIDER-'].update(x)
-                    # 更新Y-SLIDER-H范围
+                    # Update Y-SLIDER-H range
                     self.window['-Y-SLIDER-H-'].update(range=(0, self.frame_height - y))
-                    # 更新Y-SLIDER-H默认值
+                    # Update Y-SLIDER-H default value
                     self.window['-Y-SLIDER-H-'].update(h)
-                    # 更新X-SLIDER-W范围
+                    # Update X-SLIDER-W range
                     self.window['-X-SLIDER-W-'].update(range=(0, self.frame_width - x))
-                    # 更新X-SLIDER-W默认值
+                    # Update X-SLIDER-W default value
                     self.window['-X-SLIDER-W-'].update(w)
                     self._update_preview(frame, (y, h, x, w))
 
     def __disable_button(self):
-        # 1) 禁止修改字幕滑块区域
+        # 1) Disable subtitle slider area modification
         self.window['-Y-SLIDER-'].update(disabled=True)
         self.window['-X-SLIDER-'].update(disabled=True)
         self.window['-Y-SLIDER-H-'].update(disabled=True)
         self.window['-X-SLIDER-W-'].update(disabled=True)
-        # 2) 禁止再次点击【运行】、【打开】和【识别语言】按钮
+        # 2) Disable clicking [Run], [Open], and [Identify Language] buttons again
         self.window['-RUN-'].update(disabled=True)
         self.window['-FILE-'].update(disabled=True)
         self.window['-FILE_BTN-'].update(disabled=True)
 
     def _run_event_handler(self, event, values):
         """
-        当点击运行按钮时：
-        1) 禁止修改字幕滑块区域
-        2) 禁止再次点击【运行】和【打开】按钮
-        3) 设定字幕区域位置
+        When the Run button is clicked:
+        1) Disable subtitle slider area modification
+        2) Disable clicking [Run] and [Open] buttons again
+        3) Set subtitle area position
         """
         if event == '-RUN-':
             if self.video_cap is None:
                 print('Please Open Video First')
             else:
-                # 禁用按钮
+                # Disable buttons
                 self.__disable_button()
-                # 3) 设定字幕区域位置
+                # 3) Set subtitle area position
                 self.xmin = int(values['-X-SLIDER-'])
                 self.xmax = int(values['-X-SLIDER-'] + values['-X-SLIDER-W-'])
                 self.ymin = int(values['-Y-SLIDER-'])
@@ -268,7 +268,7 @@ class SubtitleRemoverGUI:
                     subtitle_area = (self.ymin, self.ymax, self.xmin, self.xmax)
                 else:
                     print(f"{'Processing multiple videos or images'}")
-                    # 先判断每个视频的分辨率是否一致，一致的话设置相同的字幕区域，否则设置为None
+                    # First check if the resolution of each video is consistent. If so, set the same subtitle area, otherwise set to None
                     global_size = None
                     for temp_video_path in self.video_paths:
                         temp_cap = cv2.VideoCapture(temp_video_path)
@@ -301,18 +301,18 @@ class SubtitleRemoverGUI:
 
     def _slide_event_handler(self, event, values):
         """
-        当滑动视频进度条/滑动字幕选择区域滑块时：
-        1) 判断视频是否存在，如果存在则显示对应的视频帧
-        2) 绘制rectangle
+        When sliding the video progress bar/subtitle selection area slider:
+        1) Check if the video exists, if so, display the corresponding video frame
+        2) Draw rectangle
         """
         if event == '-SLIDER-' or event == '-Y-SLIDER-' or event == '-Y-SLIDER-H-' or event == '-X-SLIDER-' or event \
                 == '-X-SLIDER-W-':
-            # 判断是否时单张图片
+            # Determine if it is a single image
             if is_image_file(self.video_path):
                 img = cv2.imread(self.video_path)
                 self.window['-Y-SLIDER-H-'].update(range=(0, self.frame_height - values['-Y-SLIDER-']))
                 self.window['-X-SLIDER-W-'].update(range=(0, self.frame_width - values['-X-SLIDER-']))
-                # 画字幕框
+                # Draw subtitle box
                 y = int(values['-Y-SLIDER-'])
                 h = int(values['-Y-SLIDER-H-'])
                 x = int(values['-X-SLIDER-'])
@@ -325,7 +325,7 @@ class SubtitleRemoverGUI:
                 if ret:
                     self.window['-Y-SLIDER-H-'].update(range=(0, self.frame_height-values['-Y-SLIDER-']))
                     self.window['-X-SLIDER-W-'].update(range=(0, self.frame_width-values['-X-SLIDER-']))
-                    # 画字幕框
+                    # Draw subtitle box
                     y = int(values['-Y-SLIDER-'])
                     h = int(values['-Y-SLIDER-H-'])
                     x = int(values['-X-SLIDER-'])
@@ -334,32 +334,32 @@ class SubtitleRemoverGUI:
 
     def _update_preview(self, frame, y_h_x_w):
         y, h, x, w = y_h_x_w
-        # 画字幕框
+        # Draw subtitle box
         draw = cv2.rectangle(img=frame, pt1=(int(x), int(y)), pt2=(int(x) + int(w), int(y) + int(h)),
                              color=(0, 255, 0), thickness=3)
-        # 调整视频帧大小，使播放器能够显示
+        # Resize video frame for player display
         resized_frame = self._img_resize(draw)
-        # 显示视频帧
+        # Display video frame
         self.window['-DISPLAY-'].update(data=cv2.imencode('.png', resized_frame)[1].tobytes())
 
     def _img_resize(self, image):
         top, bottom, left, right = (0, 0, 0, 0)
         height, width = image.shape[0], image.shape[1]
-        # 对长短不想等的图片，找到最长的一边
+        # For images with unequal length and width, find the longest side
         longest_edge = height
-        # 计算短边需要增加多少像素宽度使其与长边等长
+        # Calculate how many pixels of width the short side needs to add to equal the long side
         if width < longest_edge:
             dw = longest_edge - width
             left = dw // 2
             right = dw - left
         else:
             pass
-        # 给图像增加边界
+        # Add border to image
         constant = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
         return cv2.resize(constant, (self.video_preview_width, self.video_preview_height))
 
     def set_subtitle_config(self, y, h, x, w):
-        # 写入配置文件
+        # Write to configuration file
         with open(self.subtitle_config_file, mode='w', encoding='utf-8') as f:
             f.write('[AREA]\n')
             f.write(f'Y = {y}\n')
@@ -369,7 +369,7 @@ class SubtitleRemoverGUI:
 
     def parse_subtitle_config(self):
         y_p, h_p, x_p, w_p = .78, .21, .05, .9
-        # 如果配置文件不存在，则写入配置文件
+        # If the configuration file does not exist, write to it
         if not os.path.exists(self.subtitle_config_file):
             self.set_subtitle_config(y_p, h_p, x_p, w_p)
             return y_p, h_p, x_p, w_p
@@ -387,7 +387,7 @@ class SubtitleRemoverGUI:
 if __name__ == '__main__':
     try:
         multiprocessing.set_start_method("spawn")
-        # 运行图形化界面
+        # Run GUI
         subtitleRemoverGUI = SubtitleRemoverGUI()
         subtitleRemoverGUI.run()
     except Exception as e:

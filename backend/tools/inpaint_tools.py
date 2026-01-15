@@ -8,24 +8,24 @@ from backend.inpaint.lama_inpaint import LamaInpaint
 
 def batch_generator(data, max_batch_size):
     """
-    根据data大小，生成最大长度不超过max_batch_size的均匀批次数据
+    Generate uniform batch data with max length not exceeding max_batch_size based on data size
     """
     n_samples = len(data)
-    # 尝试找到一个比MAX_BATCH_SIZE小的batch_size，以使得所有的批次数量尽量接近
+    # Try to find a batch_size smaller than MAX_BATCH_SIZE so that all batch quantities are as close as possible
     batch_size = max_batch_size
     num_batches = n_samples // batch_size
 
-    # 处理最后一批可能不足batch_size的情况
-    # 如果最后一批少于其他批次，则减小batch_size尝试平衡每批的数量
+    # Handle the case where the last batch might be less than batch_size
+    # If the last batch is less than other batches, reduce batch_size to try balancing the quantity of each batch
     while n_samples % batch_size < batch_size / 2.0 and batch_size > 1:
-        batch_size -= 1  # 减小批次大小
+        batch_size -= 1  # Reduce batch size
         num_batches = n_samples // batch_size
 
-    # 生成前num_batches个批次
+    # Generate first num_batches batches
     for i in range(num_batches):
         yield data[i * batch_size:(i + 1) * batch_size]
 
-    # 将剩余的数据作为最后一个批次
+    # Use remaining data as the last batch
     last_batch_start = num_batches * batch_size
     if last_batch_start < n_samples:
         yield data[last_batch_start:]
@@ -44,16 +44,16 @@ def inference_task(batch_data):
 
 def parallel_inference(inputs, batch_size=None, pool_size=None):
     """
-    并行推理，同时保持结果顺序
+    Parallel inference, while maintaining result order
     """
     if pool_size is None:
         pool_size = multiprocessing.cpu_count()
-    # 使用上下文管理器自动管理进程池
+    # Use context manager to automatically manage process pool
     with multiprocessing.Pool(processes=pool_size) as pool:
         batched_inputs = list(batch_generator(inputs, batch_size))
-        # 使用map函数保证输入输出的顺序是一致的
+        # Use map function to ensure input and output order is consistent
         batch_results = pool.map(inference_task, batched_inputs)
-    # 将批推理结果展平
+    # Flatten batch inference results
     index_inpainted_frames = [item for sublist in batch_results for item in sublist]
     return index_inpainted_frames
 
@@ -77,7 +77,7 @@ def create_mask(size, coords_list):
     if coords_list:
         for coords in coords_list:
             xmin, xmax, ymin, ymax = coords
-            # 为了避免框过小，放大10个像素
+            # Enlarge by 10 pixels to avoid box being too small
             x1 = xmin - config.SUBTITLE_AREA_DEVIATION_PIXEL
             if x1 < 0:
                 x1 = 0
@@ -96,7 +96,7 @@ def inpaint_video(video_path, sub_list):
     frame_to_inpaint_list = []
     video_cap = cv2.VideoCapture(video_path)
     while True:
-        # 读取视频帧
+        # Read video frame
         ret, frame = video_cap.read()
         if not ret:
             break

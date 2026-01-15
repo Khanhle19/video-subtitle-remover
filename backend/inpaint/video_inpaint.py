@@ -31,7 +31,7 @@ def read_mask(mpath, length, size, flow_mask_dilates=8, mask_dilates=5):
     masks_img = []
     masks_dilated = []
     flow_masks = []
-    # 如果传入的直接为numpy array
+    # If input is directly numpy array
     if isinstance(mpath, np.ndarray):
         masks_img = [Image.fromarray(mpath)]
     # input single img path
@@ -148,11 +148,11 @@ class VideoInpaint:
         self.raft_iter = 20
         # Stride of global reference frames
         self.ref_stride = 10
-        # 设置raft模型
+        # Set up raft model
         self.fix_raft = self.init_raft_model()
-        # 设置fix_flow模型
+        # Set up fix_flow model
         self.fix_flow_complete = self.init_fix_flow_model()
-        # 设置inpaint模型
+        # Set up inpaint model
         self.model = self.init_inpaint_model()
 
     def init_raft_model(self):

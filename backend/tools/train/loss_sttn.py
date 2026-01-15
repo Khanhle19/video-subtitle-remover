@@ -4,53 +4,53 @@ import torch.nn as nn
 
 class AdversarialLoss(nn.Module):
     """
-    对抗性损失
-    根据论文 https://arxiv.org/abs/1711.10337 实现
+    Adversarial loss
+    Implemented according to paper https://arxiv.org/abs/1711.10337
     """
 
     def __init__(self, type='nsgan', target_real_label=1.0, target_fake_label=0.0):
         """
-        可以选择的损失类型有 'nsgan' | 'lsgan' | 'hinge'
-        type: 指定使用哪种类型的 GAN 损失。
-        target_real_label: 真实图像的目标标签值。
-        target_fake_label: 生成图像的目标标签值。
+        Loss types available: 'nsgan' | 'lsgan' | 'hinge'
+        type: Specify which type of GAN loss to use.
+        target_real_label: Target label value for real images.
+        target_fake_label: Target label value for fake images.
         """
         super(AdversarialLoss, self).__init__()
-        self.type = type  # 损失类型
-        # 使用缓冲区注册标签，这样在模型保存和加载时会一同保存和加载
+        self.type = type  # Loss type
+        # Register labels using buffer so they are saved and loaded with the model
         self.register_buffer('real_label', torch.tensor(target_real_label))
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
 
-        # 根据选择的类型初始化不同的损失函数
+        # Initialize different loss functions based on selected type
         if type == 'nsgan':
-            self.criterion = nn.BCELoss()  # 二进制交叉熵损失（非饱和GAN）
+            self.criterion = nn.BCELoss()  # Binary cross entropy loss (non-saturating GAN)
         elif type == 'lsgan':
-            self.criterion = nn.MSELoss()  # 均方误差损失（最小平方GAN）
+            self.criterion = nn.MSELoss()  # Mean squared error loss (least squares GAN)
         elif type == 'hinge':
-            self.criterion = nn.ReLU()  # 适用于hinge损失的ReLU函数
+            self.criterion = nn.ReLU()  # ReLU function suitable for hinge loss
 
     def __call__(self, outputs, is_real, is_disc=None):
         """
-        调用函数计算损失。
-        outputs: 网络输出。
-        is_real: 如果是真实样本，则为 True；如果是生成样本，则为 False。
-        is_disc: 指示当前是否在优化判别器。
+        Call function to calculate loss.
+        outputs: Network output.
+        is_real: True if real sample; False if fake sample.
+        is_disc: Indicates whether discriminator is currently being optimized.
         """
         if self.type == 'hinge':
-            # 对于 hinge 损失
+            # For hinge loss
             if is_disc:
-                # 如果是判别器
+                # If discriminator
                 if is_real:
-                    outputs = -outputs  # 对真实样本反向标签
-                # max(0, 1 - (真/假)示例输出)
+                    outputs = -outputs  # Reverse label for real samples
+                # max(0, 1 - (real/fake) example output)
                 return self.criterion(1 + outputs).mean()
             else:
-                # 如果是生成器, -min(0, -输出) = max(0, 输出)
+                # If generator, -min(0, -output) = max(0, output)
                 return (-outputs).mean()
         else:
-            # 对于 nsgan 和 lsgan 损失
+            # For nsgan and lsgan loss
             labels = (self.real_label if is_real else self.fake_label).expand_as(
                 outputs)
-            # 计算模型输出和目标标签之间的损失
+            # Calculate loss between model output and target labels
             loss = self.criterion(outputs, labels)
             return loss

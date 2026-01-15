@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 class SubtitleDetect:
     """
-    文本框检测类，用于检测视频帧中是否存在文本框
+    Text box detection class, used to detect whether there are text boxes in video frames
     """
 
     def __init__(self, video_path, sub_area=None):
@@ -42,7 +42,7 @@ class SubtitleDetect:
         paddle.disable_signal_handler()
         from paddleocr.tools.infer import utility
         from paddleocr.tools.infer.predict_det import TextDetector
-        # 获取参数对象
+        # Get parameter object
         importlib.reload(config)
         args = utility.parse_args()
         args.det_algorithm = 'DB'
@@ -58,9 +58,9 @@ class SubtitleDetect:
     @staticmethod
     def get_coordinates(dt_box):
         """
-        从返回的检测框中获取坐标
-        :param dt_box 检测框返回结果
-        :return list 坐标点列表
+        Get coordinates from the returned detection box
+        :param dt_box: Detection box return result
+        :return: list Coordinate point list
         """
         coordinate_list = list()
         if isinstance(dt_box, list):
@@ -86,10 +86,10 @@ class SubtitleDetect:
         print('[Processing] start finding subtitles...')
         while video_cap.isOpened():
             ret, frame = video_cap.read()
-            # 如果读取视频帧失败（视频读到最后一帧）
+            # If reading video frame fails (video read to the last frame)
             if not ret:
                 break
-            # 读取视频帧成功
+            # Read video frame successfully
             current_frame_no += 1
             dt_boxes, elapse = self.detect_subtitle(frame)
             coordinate_list = self.get_coordinates(dt_boxes.tolist())
@@ -115,7 +115,7 @@ class SubtitleDetect:
         #     subtitle_frame_no_box_dict = self.get_subtitle_frame_no_box_dict_with_united_coordinates(subtitle_frame_no_box_dict)
         #     if sub_remover is not None:
         #         try:
-        #             # 当帧数大于1时，说明并非图片或单帧
+        #             # When frame count > 1, it means it is not an image or single frame
         #             if sub_remover.frame_count > 1:
         #                 subtitle_frame_no_box_dict = self.filter_mistake_sub_area(subtitle_frame_no_box_dict,
         #                                                                           sub_remover.fps)
@@ -177,31 +177,31 @@ class SubtitleDetect:
 
     @staticmethod
     def split_range_by_scene(intervals, points):
-        # 确保离散值列表是有序的
+        # Ensure the discrete value list is ordered
         points.sort()
-        # 用于存储结果区间的列表
+        # List to store result intervals
         result_intervals = []
-        # 遍历区间
+        # Traverse intervals
         for start, end in intervals:
-            # 在当前区间内的点
+            # Points within the current interval
             current_points = [p for p in points if start <= p <= end]
 
-            # 遍历当前区间内的离散点
+            # Traverse discrete points within the current interval
             for p in current_points:
-                # 如果当前离散点不是区间的起始点，添加从区间开始到离散点前一个数字的区间
+                # If the current discrete point is not the start of the interval, add the interval from the start of the interval to the number before the discrete point
                 if start < p:
                     result_intervals.append((start, p - 1))
-                # 更新区间开始为当前离散点
+                # Update interval start to current discrete point
                 start = p
-            # 添加从最后一个离散点或区间开始到区间结束的区间
+            # Add interval from the last discrete point or interval start to interval end
             result_intervals.append((start, end))
-        # 输出结果
+        # Output result
         return result_intervals
 
     @staticmethod
     def get_scene_div_frame_no(v_path):
         """
-        获取发生场景切换的帧号
+        Get frame number where scene change occurs
         """
         scene_div_frame_no_list = []
         scene_list = scene_detect(v_path, ContentDetector())
@@ -215,7 +215,7 @@ class SubtitleDetect:
 
     @staticmethod
     def are_similar(region1, region2):
-        """判断两个区域是否相似。"""
+        """Determine if two regions are similar."""
         xmin1, xmax1, ymin1, ymax1 = region1
         xmin2, xmax2, ymin2, ymax2 = region2
 
@@ -223,35 +223,35 @@ class SubtitleDetect:
             abs(ymin1 - ymin2) <= config.PIXEL_TOLERANCE_Y and abs(ymax1 - ymax2) <= config.PIXEL_TOLERANCE_Y
 
     def unify_regions(self, raw_regions):
-        """将连续相似的区域统一，保持列表结构。"""
+        """Unify continuous similar regions, maintaining list structure."""
         if len(raw_regions) > 0:
-            keys = sorted(raw_regions.keys())  # 对键进行排序以确保它们是连续的
+            keys = sorted(raw_regions.keys())  # Sort keys to ensure they are continuous
             unified_regions = {}
 
-            # 初始化
+            # Initialize
             last_key = keys[0]
             unify_value_map = {last_key: raw_regions[last_key]}
 
             for key in keys[1:]:
                 current_regions = raw_regions[key]
 
-                # 新增一个列表来存放匹配过的标准区间
+                # Add a list to store matched standard intervals
                 new_unify_values = []
 
                 for idx, region in enumerate(current_regions):
                     last_standard_region = unify_value_map[last_key][idx] if idx < len(unify_value_map[last_key]) else None
 
-                    # 如果当前的区间与前一个键的对应区间相似，我们统一它们
+                    # If current interval is similar to the corresponding interval of the previous key, we unify them
                     if last_standard_region and self.are_similar(region, last_standard_region):
                         new_unify_values.append(last_standard_region)
                     else:
                         new_unify_values.append(region)
 
-                # 更新unify_value_map为最新的区间值
+                # Update unify_value_map to the latest interval value
                 unify_value_map[key] = new_unify_values
                 last_key = key
 
-            # 将最终统一后的结果传递给unified_regions
+            # Pass the final unified result to unified_regions
             for key in keys:
                 unified_regions[key] = unify_value_map[key]
             return unified_regions
@@ -261,20 +261,20 @@ class SubtitleDetect:
     @staticmethod
     def find_continuous_ranges(subtitle_frame_no_box_dict):
         """
-        获取字幕出现的起始帧号与结束帧号
+        Get the start and end frame numbers where subtitles appear
         """
         numbers = sorted(list(subtitle_frame_no_box_dict.keys()))
         ranges = []
-        start = numbers[0]  # 初始区间开始值
+        start = numbers[0]  # Initial interval start value
 
         for i in range(1, len(numbers)):
-            # 如果当前数字与前一个数字间隔超过1，
-            # 则上一个区间结束，记录当前区间的开始与结束
+            # If the current number is more than 1 apart from the previous number,
+            # the previous interval ends, record the start and end of the current interval
             if numbers[i] - numbers[i - 1] != 1:
-                end = numbers[i - 1]  # 则该数字是当前连续区间的终点
+                end = numbers[i - 1]  # This number is the end of the current continuous interval
                 ranges.append((start, end))
-                start = numbers[i]  # 开始下一个连续区间
-        # 添加最后一个区间
+                start = numbers[i]  # Start next continuous interval
+        # Add the last interval
         ranges.append((start, numbers[-1]))
         return ranges
 
@@ -282,22 +282,22 @@ class SubtitleDetect:
     def find_continuous_ranges_with_same_mask(subtitle_frame_no_box_dict):
         numbers = sorted(list(subtitle_frame_no_box_dict.keys()))
         ranges = []
-        start = numbers[0]  # 初始区间开始值
+        start = numbers[0]  # Initial interval start value
         for i in range(1, len(numbers)):
-            # 如果当前帧号与前一个帧号间隔超过1，
-            # 则上一个区间结束，记录当前区间的开始与结束
+            # If the current frame number is more than 1 apart from the previous frame number,
+            # the previous interval ends, record the start and end of the current interval
             if numbers[i] - numbers[i - 1] != 1:
-                end = numbers[i - 1]  # 则该数字是当前连续区间的终点
+                end = numbers[i - 1]  # This number is the end of the current continuous interval
                 ranges.append((start, end))
-                start = numbers[i]  # 开始下一个连续区间
-            # 如果当前帧号与前一个帧号间隔为1，且当前帧号对应的坐标点与上一帧号对应的坐标点不一致
-            # 记录当前区间的开始与结束
+                start = numbers[i]  # Start next continuous interval
+            # If the current frame number is 1 apart from the previous frame number, and the coordinate point corresponding to the current frame number is inconsistent with that of the previous frame number
+            # Record the start and end of the current interval
             if numbers[i] - numbers[i - 1] == 1:
                 if subtitle_frame_no_box_dict[numbers[i]] != subtitle_frame_no_box_dict[numbers[i - 1]]:
-                    end = numbers[i - 1]  # 则该数字是当前连续区间的终点
+                    end = numbers[i - 1]  # This number is the end of the current continuous interval
                     ranges.append((start, end))
-                    start = numbers[i]  # 开始下一个连续区间
-        # 添加最后一个区间
+                    start = numbers[i]  # Start next continuous interval
+        # Add the last interval
         ranges.append((start, numbers[-1]))
         return ranges
 
@@ -314,36 +314,36 @@ class SubtitleDetect:
 
     @staticmethod
     def expand_and_merge_intervals(intervals, expand_size=config.STTN_NEIGHBOR_STRIDE*config.STTN_REFERENCE_LENGTH, max_length=config.STTN_MAX_LOAD_NUM):
-        # 初始化输出区间列表
+        # Initialize output interval list
         expanded_intervals = []
 
-        # 对每个原始区间进行扩展
+        # Expand each original interval
         for interval in intervals:
             start, end = interval
 
-            # 扩展至至少 'expand_size' 个单位，但不超过 'max_length' 个单位
+            # Expand to at least 'expand_size' units, but not more than 'max_length' units
             expansion_amount = max(expand_size - (end - start + 1), 0)
 
-            # 在保证包含原区间的前提下尽可能平分前后扩展量
-            expand_start = max(start - expansion_amount // 2, 1)  # 确保起始点不小于1
+            # Split expansion amount before and after evenly while ensuring original interval is included
+            expand_start = max(start - expansion_amount // 2, 1)  # Ensure start point is not less than 1
             expand_end = end + expansion_amount // 2
 
-            # 如果扩展后的区间超出了最大长度，进行调整
+            # If expanded interval exceeds max length, adjust
             if (expand_end - expand_start + 1) > max_length:
                 expand_end = expand_start + max_length - 1
 
-            # 对于单点的处理，需额外保证有至少 'expand_size' 长度
+            # For single point processing, need to ensure at least 'expand_size' length
             if start == end:
                 if expand_end - expand_start + 1 < expand_size:
                     expand_end = expand_start + expand_size - 1
 
-            # 检查与前一个区间是否有重叠并进行相应的合并
+            # Check overlaps with previous interval and merge accordingly
             if expanded_intervals and expand_start <= expanded_intervals[-1][1]:
                 previous_start, previous_end = expanded_intervals.pop()
                 expand_start = previous_start
                 expand_end = max(expand_end, previous_end)
 
-            # 添加扩展后的区间至结果列表
+            # Add expanded interval to result list
             expanded_intervals.append((expand_start, expand_end))
 
         return expanded_intervals
@@ -351,45 +351,45 @@ class SubtitleDetect:
     @staticmethod
     def filter_and_merge_intervals(intervals, target_length=config.STTN_REFERENCE_LENGTH):
         """
-        合并传入的字幕起始区间，确保区间大小最低为STTN_REFERENCE_LENGTH
+        Merge passed subtitle start intervals, ensure interval size is at least STTN_REFERENCE_LENGTH
         """
         expanded = []
-        # 首先单独处理单点区间以扩展它们
+        # First process single point intervals individually to expand them
         for start, end in intervals:
-            if start == end:  # 单点区间
-                # 扩展到接近的目标长度，但保证前后不重叠
+            if start == end:  # Single point interval
+                # Expand to close to target length, but ensure no overlap before and after
                 prev_end = expanded[-1][1] if expanded else float('-inf')
                 next_start = float('inf')
-                # 查找下一个区间的起始点
+                # Find start point of next interval
                 for ns, ne in intervals:
                     if ns > end:
                         next_start = ns
                         break
-                # 确定新的扩展起点和终点
+                # Determine new expansion start and end points
                 new_start = max(start - (target_length - 1) // 2, prev_end + 1)
                 new_end = min(start + (target_length - 1) // 2, next_start - 1)
-                # 如果新的扩展终点在起点前面，说明没有足够空间来进行扩展
+                # If new expansion end is before start, it means not enough space to expand
                 if new_end < new_start:
-                    new_start, new_end = start, start  # 保持原样
+                    new_start, new_end = start, start  # Keep as is
                 expanded.append((new_start, new_end))
             else:
-                # 非单点区间直接保留，稍后处理任何可能的重叠
+                # Non-single point intervals are kept directly, handle any possible overlaps later
                 expanded.append((start, end))
-        # 排序以合并那些因扩展导致重叠的区间
+        # Sort to merge intervals that overlap due to expansion
         expanded.sort(key=lambda x: x[0])
-        # 合并重叠的区间，但仅当它们之间真正重叠且小于目标长度时
+        # Merge overlapping intervals, but only if they truly overlap and are less than target length
         merged = [expanded[0]]
         for start, end in expanded[1:]:
             last_start, last_end = merged[-1]
-            # 检查是否重叠
+            # Check overlap
             if start <= last_end and (end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
-                # 需要合并
-                merged[-1] = (last_start, max(last_end, end))  # 合并区间
+                # Need merge
+                merged[-1] = (last_start, max(last_end, end))  # Merge interval
             elif start == last_end + 1 and (end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
-                # 相邻区间也需要合并的场景
+                # Adjacent intervals also need merging scenario
                 merged[-1] = (last_start, end)
             else:
-                # 如果没有重叠且都大于目标长度，则直接保留
+                # If no overlap and both greater than target length, keep directly
                 merged.append((start, end))
         return merged
 
@@ -410,17 +410,17 @@ class SubtitleDetect:
     def get_area_max_box_dict(self, sub_frame_no_list_continuous, subtitle_frame_no_box_dict):
         _area_max_box_dict = dict()
         for start_no, end_no in sub_frame_no_list_continuous:
-            # 寻找面积最大文本框
+            # Find max area text box
             current_no = start_no
-            # 查找当前区间矩形框最大面积
+            # Find max area of rectangle box in current interval
             area_max_box_list = []
             while current_no <= end_no:
                 for coord in subtitle_frame_no_box_dict[current_no]:
-                    # 取出每一个文本框坐标
+                    # Get each text box coordinate
                     xmin, xmax, ymin, ymax = coord
-                    # 计算当前文本框坐标面积
+                    # Calculate current text box area
                     current_area = abs(xmax - xmin) * abs(ymax - ymin)
-                    # 如果区间最大框列表为空，则当前面积为区间最大面积
+                    # If interval max box list is empty, current area is max area
                     if len(area_max_box_list) < 1:
                         area_max_box_list.append({
                             'area': current_area,
@@ -429,29 +429,29 @@ class SubtitleDetect:
                             'ymin': ymin,
                             'ymax': ymax
                         })
-                    # 如果列表非空，判断当前文本框是与区间最大文本框在同一区域
+                    # If list not empty, judge if current text box is in same region as interval max text box
                     else:
                         has_same_position = False
-                        # 遍历每个区间最大文本框，判断当前文本框位置是否与区间最大文本框列表的某个文本框位于同一行且交叉
+                        # Traverse each interval max text box, judge if current text box position is in same line and intersects with a text box in interval max text box list
                         for area_max_box in area_max_box_list:
                             if (area_max_box['ymin'] - config.THRESHOLD_HEIGHT_DIFFERENCE <= ymin
                                     and ymax <= area_max_box['ymax'] + config.THRESHOLD_HEIGHT_DIFFERENCE):
                                 if self.compute_iou((xmin, xmax, ymin, ymax), (
                                         area_max_box['xmin'], area_max_box['xmax'], area_max_box['ymin'],
                                         area_max_box['ymax'])) != -1:
-                                    # 如果高度差异不一样
+                                    # If height difference is different
                                     if abs(abs(area_max_box['ymax'] - area_max_box['ymin']) - abs(
                                             ymax - ymin)) < config.THRESHOLD_HEIGHT_DIFFERENCE:
                                         has_same_position = True
-                                    # 如果在同一行，则计算当前面积是不是最大
-                                    # 判断面积大小，若当前面积更大，则将当前行的最大区域坐标点更新
+                                    # If in same line, calculate if current area is max
+                                    # Judge area size, if current area is larger, update max region coordinate points of current line
                                     if has_same_position and current_area > area_max_box['area']:
                                         area_max_box['area'] = current_area
                                         area_max_box['xmin'] = xmin
                                         area_max_box['xmax'] = xmax
                                         area_max_box['ymin'] = ymin
                                         area_max_box['ymax'] = ymax
-                        # 如果遍历了所有的区间最大文本框列表，发现是新的一行，则直接添加
+                        # If traversed all interval max text box lists and found it's a new line, add directly
                         if not has_same_position:
                             new_large_area = {
                                 'area': current_area,
@@ -473,7 +473,7 @@ class SubtitleDetect:
 
     def get_subtitle_frame_no_box_dict_with_united_coordinates(self, subtitle_frame_no_box_dict):
         """
-        将多个视频帧的文本区域坐标统一
+        Unify text region coordinates of multiple video frames
         """
         subtitle_frame_no_box_dict_with_united_coordinates = dict()
         frame_no_list = self.find_continuous_ranges_with_same_mask(subtitle_frame_no_box_dict)
@@ -506,7 +506,7 @@ class SubtitleDetect:
 
     def prevent_missed_detection(self, subtitle_frame_no_box_dict):
         """
-        添加额外的文本框，防止漏检
+        Add extra text boxes to prevent missed detection
         """
         frame_no_list = self.find_continuous_ranges_with_same_mask(subtitle_frame_no_box_dict)
         for start_no, end_no in frame_no_list:
@@ -541,7 +541,7 @@ class SubtitleDetect:
 
     def filter_mistake_sub_area(self, subtitle_frame_no_box_dict, fps):
         """
-        过滤错误的字幕区域
+        Filter incorrect subtitle areas
         """
         sub_frame_no_list_continuous = self.find_continuous_ranges_with_same_mask(subtitle_frame_no_box_dict)
         sub_area_with_frequency = self.get_frequency_in_range(sub_frame_no_list_continuous, subtitle_frame_no_box_dict)
@@ -565,36 +565,36 @@ class SubtitleDetect:
 class SubtitleRemover:
     def __init__(self, vd_path, sub_area=None, gui_mode=False):
         importlib.reload(config)
-        # 线程锁
+        # Thread lock
         self.lock = threading.RLock()
-        # 用户指定的字幕区域位置
+        # Subtitle area position specified by user
         self.sub_area = sub_area
-        # 是否为gui运行，gui运行需要显示预览
+        # Whether running in GUI, GUI run needs to display preview
         self.gui_mode = gui_mode
-        # 判断是否为图片
+        # Judge if it is an image
         self.is_picture = False
         if is_image_file(str(vd_path)):
             self.sub_area = None
             self.is_picture = True
-        # 视频路径
+        # Video path
         self.video_path = vd_path
         self.video_cap = cv2.VideoCapture(vd_path)
-        # 通过视频路径获取视频名称
+        # Get video name from video path
         self.vd_name = Path(self.video_path).stem
-        # 视频帧总数
+        # Total video frames
         self.frame_count = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT) + 0.5)
-        # 视频帧率
+        # Video FPS
         self.fps = self.video_cap.get(cv2.CAP_PROP_FPS)
-        # 视频尺寸
+        # Video size
         self.size = (int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         self.mask_size = (int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)))
         self.frame_height = int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.frame_width = int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        # 创建字幕检测对象
+        # Create subtitle detection object
         self.sub_detector = SubtitleDetect(self.video_path, self.sub_area)
-        # 创建视频临时对象，windows下delete=True会有permission denied的报错
+        # Create temporary video object, windows delete=True will have permission denied error
         self.video_temp_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-        # 创建视频写对象
+        # Create video writer object
         self.video_writer = cv2.VideoWriter(self.video_temp_file.name, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, self.size)
         self.video_out_name = os.path.join(os.path.dirname(self.video_path), f'{self.vd_name}_no_sub.mp4')
         self.video_inpaint = None
@@ -615,21 +615,21 @@ class SubtitleRemover:
             print(f"Detected execution provider: {provider}")
 
 
-        # 总处理进度
+        # Total processing progress
         self.progress_total = 0
         self.progress_remover = 0
         self.isFinished = False
-        # 预览帧
+        # Preview frame
         self.preview_frame = None
-        # 是否将原音频嵌入到去除字幕后的视频
+        # Whether to embed original audio into video after subtitle removal
         self.is_successful_merged = False
 
     @staticmethod
     def get_coordinates(dt_box):
         """
-        从返回的检测框中获取坐标
-        :param dt_box 检测框返回结果
-        :return list 坐标点列表
+        Get coordinates from the returned detection box
+        :param dt_box: Detection box result
+        :return: list of coordinate points
         """
         coordinate_list = list()
         if isinstance(dt_box, list):
@@ -649,7 +649,7 @@ class SubtitleRemover:
     @staticmethod
     def is_current_frame_no_start(frame_no, continuous_frame_no_list):
         """
-        判断给定的帧号是否为开头，是的话返回结束帧号，不是的话返回-1
+        Determine if given frame number is start, if so return end frame number, otherwise return -1
         """
         for start_no, end_no in continuous_frame_no_list:
             if start_no == frame_no:
@@ -659,7 +659,7 @@ class SubtitleRemover:
     @staticmethod
     def find_frame_no_end(frame_no, continuous_frame_no_list):
         """
-        判断给定的帧号是否为开头，是的话返回结束帧号，不是的话返回-1
+        Determine if given frame number is start, if so return end frame number, otherwise return -1
         """
         for start_no, end_no in continuous_frame_no_list:
             if start_no <= frame_no <= end_no:
@@ -687,40 +687,40 @@ class SubtitleRemover:
             if not ret:
                 break
             index += 1
-            # 如果当前帧没有水印/文本则直接写
+            # If current frame has no watermark/text, write directly
             if index not in sub_list.keys():
                 self.video_writer.write(frame)
                 print(f'write frame: {index}')
                 self.update_progress(tbar, increment=1)
                 continue
-            # 如果有水印，判断该帧是不是开头帧
+            # If there is watermark, judge if this frame is start frame
             else:
-                # 如果是开头帧，则批推理到尾帧
+                # If start frame, batch inference to end frame
                 if self.is_current_frame_no_start(index, continuous_frame_no_list):
                     # print(f'No 1 Current index: {index}')
                     start_frame_no = index
                     print(f'find start: {start_frame_no}')
-                    # 找到结束帧
+                    # Find end frame
                     end_frame_no = self.find_frame_no_end(index, continuous_frame_no_list)
-                    # 判断当前帧号是不是字幕起始位置
-                    # 如果获取的结束帧号不为-1则说明
+                    # Judge if current frame number is subtitle start position
+                    # If obtained end frame number is not -1, it means...
                     if end_frame_no != -1:
                         print(f'find end: {end_frame_no}')
-                        # ************ 读取该区间所有帧 start ************
+                        # ************ Read all frames in this interval start ************
                         temp_frames = list()
-                        # 将头帧加入处理列表
+                        # Add head frame to processing list
                         temp_frames.append(frame)
                         inner_index = 0
-                        # 一直读取到尾帧
+                        # Read until tail frame
                         while index < end_frame_no:
                             ret, frame = self.video_cap.read()
                             if not ret:
                                 break
                             index += 1
                             temp_frames.append(frame)
-                        # ************ 读取该区间所有帧 end ************
+                        # ************ Read all frames in this interval end ************
                         if len(temp_frames) < 1:
-                            # 没有待处理，直接跳过
+                            # Nothing to process, skip directly
                             continue
                         elif len(temp_frames) == 1:
                             inner_index += 1
@@ -733,11 +733,11 @@ class SubtitleRemover:
                             self.update_progress(tbar, increment=1)
                             continue
                         else:
-                            # 将读取的视频帧分批处理
-                            # 1. 获取当前批次使用的mask
+                            # Process read video frames in batches
+                            # 1. Get mask used for current batch
                             mask = create_mask(self.mask_size, sub_list[start_frame_no])
                             for batch in batch_generator(temp_frames, config.PROPAINTER_MAX_LOAD_NUM):
-                                # 2. 调用批推理
+                                # 2. Call batch inference
                                 if len(batch) == 1:
                                     single_mask = create_mask(self.mask_size, sub_list[start_frame_no])
                                     if self.lama_inpaint is None:
@@ -759,7 +759,7 @@ class SubtitleRemover:
 
     def sttn_mode_with_no_detection(self, tbar):
         """
-        使用sttn对选中区域进行重绘，不进行字幕检测
+        Use sttn to inpainted selected area, without subtitle detection
         """
         print('use sttn mode with no detection')
         print('[Processing] start removing subtitles...')
@@ -774,9 +774,9 @@ class SubtitleRemover:
         sttn_video_inpaint(input_mask=mask, input_sub_remover=self, tbar=tbar)
 
     def sttn_mode(self, tbar):
-        # 是否跳过字幕帧寻找
+        # Whether to skip subtitle frame finding
         if config.STTN_SKIP_DETECTION:
-            # 若跳过则世界使用sttn模式
+            # If skipped, use sttn mode directly
             self.sttn_mode_with_no_detection(tbar)
         else:
             print('use sttn mode')
@@ -794,27 +794,27 @@ class SubtitleRemover:
             print('[Processing] start removing subtitles...')
             while True:
                 ret, frame = self.video_cap.read()
-                # 如果读取到为，则结束
+                # If read to end, finish
                 if not ret:
                     break
                 current_frame_index += 1
-                # 判断当前帧号是不是字幕区间开始, 如果不是，则直接写
+                # Determine if the current frame number is the start of a subtitle interval. If not, write directly.
                 if current_frame_index not in start_end_map.keys():
                     self.video_writer.write(frame)
                     print(f'write frame: {current_frame_index}')
                     self.update_progress(tbar, increment=1)
                     if self.gui_mode:
                         self.preview_frame = cv2.hconcat([frame, frame])
-                # 如果是区间开始，则找到尾巴
+                # If it is the start of an interval, find the end.
                 else:
                     start_frame_index = current_frame_index
                     end_frame_index = start_end_map[current_frame_index]
                     print(f'processing frame {start_frame_index} to {end_frame_index}')
-                    # 用于存储需要去字幕的视频帧
+                    # Used to store video frames that need subtitle removal
                     frames_need_inpaint = list()
                     frames_need_inpaint.append(frame)
                     inner_index = 0
-                    # 接着往下读，直到读取到尾巴
+                    # Continue reading until the end is reached
                     for j in range(end_frame_index - start_frame_index):
                         ret, frame = self.video_cap.read()
                         if not ret:
@@ -822,21 +822,21 @@ class SubtitleRemover:
                         current_frame_index += 1
                         frames_need_inpaint.append(frame)
                     mask_area_coordinates = []
-                    # 1. 获取当前批次的mask坐标全集
+                    # 1. Get the full set of mask coordinates for the current batch
                     for mask_index in range(start_frame_index, end_frame_index):
                         if mask_index in sub_list.keys():
                             for area in sub_list[mask_index]:
                                 xmin, xmax, ymin, ymax = area
-                                # 判断是不是非字幕区域(如果宽大于长，则认为是错误检测)
+                                # Determine if it is a non-subtitle area (if width is greater than height, it is considered a false detection)
                                 if (ymax - ymin) - (xmax - xmin) > config.THRESHOLD_HEIGHT_WIDTH_DIFFERENCE:
                                     continue
                                 if area not in mask_area_coordinates:
                                     mask_area_coordinates.append(area)
-                    # 1. 获取当前批次使用的mask
+                    # 1. Get the mask used for the current batch
                     mask = create_mask(self.mask_size, mask_area_coordinates)
                     print(f'inpaint with mask: {mask_area_coordinates}')
                     for batch in batch_generator(frames_need_inpaint, config.STTN_MAX_LOAD_NUM):
-                        # 2. 调用批推理
+                        # 2. Call batch inference
                         if len(batch) >= 1:
                             inpainted_frames = sttn_inpaint(batch, mask)
                             for i, inpainted_frame in enumerate(inpainted_frames):
@@ -877,9 +877,9 @@ class SubtitleRemover:
             self.progress_total = 50 + self.progress_remover
 
     def run(self):
-        # 记录开始时间
+        # Record start time
         start_time = time.time()
-        # 重置进度条
+        # Reset progress bar
         self.progress_total = 0
         tbar = tqdm(total=int(self.frame_count), unit='frame', position=0, file=sys.__stdout__,
                     desc='Subtitle Removing')
@@ -898,7 +898,7 @@ class SubtitleRemover:
             tbar.update(1)
             self.progress_total = 100
         else:
-            # 精准模式下，获取场景分割的帧号，进一步切割
+            # In precise mode, get the frame number of scene segmentation and further split
             if config.MODE == config.InpaintMode.PROPAINTER:
                 self.propainter_mode(tbar)
             elif config.MODE == config.InpaintMode.STTN:
@@ -908,7 +908,7 @@ class SubtitleRemover:
         self.video_cap.release()
         self.video_writer.release()
         if not self.is_picture:
-            # 将原音频合并到新生成的视频文件中
+            # Merge original audio into the newly generated video file
             self.merge_audio_to_video()
             print(f"[Finished]Subtitle successfully removed, video generated at：{self.video_out_name}")
         else:
@@ -926,7 +926,7 @@ class SubtitleRemover:
                     print(f'failed to delete temp file {self.video_temp_file.name}')
 
     def merge_audio_to_video(self):
-        # 创建音频临时对象，windows下delete=True会有permission denied的报错
+        # Create audio temporary object; delete=True causes permission denied error on Windows
         temp = tempfile.NamedTemporaryFile(suffix='.aac', delete=False)
         audio_extract_command = [config.FFMPEG_PATH,
                                  "-y", "-i", self.video_path,
@@ -972,12 +972,12 @@ class SubtitleRemover:
 
 if __name__ == '__main__':
     multiprocessing.set_start_method("spawn")
-    # 1. 提示用户输入视频路径
+    # 1. Prompt user to input video path
     video_path = input(f"Please input video or image file path: ").strip()
-    # 判断视频路径是不是一个目录，是目录的化，批量处理改目录下的所有视频文件
-    # 2. 按以下顺序传入字幕区域
+    # Check if video path is a directory; if so, batch process all video files in that directory
+    # 2. Pass subtitle area in the following order
     # sub_area = (ymin, ymax, xmin, xmax)
-    # 3. 新建字幕提取对象
+    # 3. Create new subtitle extraction object
     if is_video_or_image(video_path):
         sd = SubtitleRemover(video_path, sub_area=None)
         sd.run()
