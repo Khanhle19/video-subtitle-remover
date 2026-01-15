@@ -104,7 +104,7 @@ MODE Optional algorithm types
 - InpaintMode.PROPAINTER algorithm: Consumes a large amount of VRAM, slow speed, better effect for videos with very intense motion
 """
 # [Set inpaint algorithm]
-MODE = InpaintMode.STTN
+MODE = InpaintMode.LAMA
 # [Set pixel deviation]
 # Used to determine if it is a non-subtitle area (generally assumes the subtitle text box length is greater than width. If height > width and exceeds the specified pixel size, it is considered a false detection)
 THRESHOLD_HEIGHT_WIDTH_DIFFERENCE = 10
@@ -153,6 +153,6 @@ PROPAINTER_MAX_LOAD_NUM = 70
 
 # ×××××××××× InpaintMode.LAMA Algorithm Settings start ××××××××××
 # Whether to enable super fast mode. Does not guarantee inpaint effect, only removes text in areas containing text
-LAMA_SUPER_FAST = False
+LAMA_SUPER_FAST = True
 # ×××××××××× InpaintMode.LAMA Algorithm Settings end ××××××××××
 # ×××××××××××××××××××× [CAN CHANGE] end ××××××××××××××××××××
